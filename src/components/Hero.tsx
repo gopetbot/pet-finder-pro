@@ -64,7 +64,7 @@ export const Hero = () => {
           animationDelay: '0.4s'
         }}>
             <div className="text-center">
-              <div className="text-3xl md:text-4xl font-extrabold text-primary">2.500+</div>
+              <div className="text-3xl md:text-4xl font-extrabold text-primary">7.500+</div>
               <div className="text-sm text-muted-foreground">Pets reunidos</div>
             </div>
             <div className="text-center">
