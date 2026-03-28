@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -18,6 +18,7 @@ import type { Timestamp } from 'firebase/firestore'
 
 import { db } from '@/lib/firebase'
 import { useAuth } from '@/contexts/AuthContext'
+import { uploadPalestraImage } from '@/services/storageService'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -36,27 +37,29 @@ interface Palestra {
   palestrante: string
   data: string
   resumo: string
-  driveImageId: string
+  imageUrl: string
   createdAt: Timestamp
 }
 
-type PalestraFormData = Omit<Palestra, 'id' | 'createdAt'>
+type PalestraFormData = Omit<Palestra, 'id' | 'createdAt' | 'imageUrl'>
 
-// 6.1 - Zod schema: all fields required, non-empty after trim
+// Zod schema: all fields required, non-empty after trim
 const palestraSchema = z.object({
   titulo: z.string().trim().min(1, 'Título é obrigatório'),
   palestrante: z.string().trim().min(1, 'Palestrante é obrigatório'),
   data: z.string().trim().min(1, 'Data é obrigatória'),
   resumo: z.string().trim().min(1, 'Resumo é obrigatório'),
-  driveImageId: z.string().trim().min(1, 'ID da imagem é obrigatório'),
 })
 
 export default function AdminPalestras() {
   const { signOut } = useAuth()
   const [palestras, setPalestras] = useState<Palestra[]>([])
   const [listLoading, setListLoading] = useState(true)
+  const [isUploading, setIsUploading] = useState<boolean>(false)
+  const [previewUrl, setPreviewUrl] = useState<string>('')
+  const [fileError, setFileError] = useState<string>('')
+  const fileRef = useRef<HTMLInputElement>(null)
 
-  // 6.1 - Controlled form with react-hook-form + zod
   const {
     register,
     handleSubmit,
@@ -66,7 +69,7 @@ export default function AdminPalestras() {
     resolver: zodResolver(palestraSchema),
   })
 
-  // 6.4 - Real-time list with onSnapshot
+  // Real-time list with onSnapshot
   useEffect(() => {
     const q = query(collection(db, 'palestras'), orderBy('createdAt', 'desc'))
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -80,32 +83,40 @@ export default function AdminPalestras() {
     return unsubscribe
   }, [])
 
-  // 6.2 - handleAddPalestra
   const handleAddPalestra = async (formData: PalestraFormData) => {
+    const file = fileRef.current?.files?.[0]
+    if (!file) {
+      setFileError('Imagem é obrigatória')
+      return
+    }
+
+    setIsUploading(true)
     try {
+      const imageUrl = await uploadPalestraImage(file)
       await addDoc(collection(db, 'palestras'), {
         ...formData,
+        imageUrl,
         createdAt: serverTimestamp(),
       })
-      // 6.3 - Toast success + reset
       toast('Palestra adicionada com sucesso!')
       reset()
+      setPreviewUrl('')
+      if (fileRef.current) fileRef.current.value = ''
     } catch {
-      // 6.3 - Toast error, preserve form data (no reset)
       toast('Erro ao adicionar palestra.', {
         description: 'Tente novamente.',
       })
+    } finally {
+      setIsUploading(false)
     }
   }
 
-  // 6.5 - handleDelete
   const handleDelete = async (id: string) => {
     await deleteDoc(doc(db, 'palestras', id))
   }
 
   return (
     <div className="min-h-screen bg-background">
-      {/* 6.6 - Page header with logout button */}
       <header className="border-b px-6 py-4 flex items-center justify-between">
         <h1 className="text-2xl font-bold">Admin - Palestras</h1>
         <Button variant="outline" onClick={signOut}>
@@ -154,16 +165,36 @@ export default function AdminPalestras() {
               </div>
 
               <div className="space-y-1">
-                <Label htmlFor="driveImageId">ID da Imagem (Google Drive)</Label>
-                <Input id="driveImageId" {...register('driveImageId')} />
-                {errors.driveImageId && (
-                  <p className="text-sm text-destructive">{errors.driveImageId.message}</p>
+                <Label htmlFor="imageFile">Imagem</Label>
+                <input
+                  id="imageFile"
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  ref={fileRef}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    if (file) {
+                      setPreviewUrl(URL.createObjectURL(file))
+                      setFileError('')
+                    }
+                  }}
+                  className="block w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
+                />
+                {previewUrl && (
+                  <img src={previewUrl} alt="Preview" className="mt-2 h-32 w-auto rounded-md object-cover" />
                 )}
+                {fileError && <p className="text-sm text-destructive">{fileError}</p>}
               </div>
 
-              <Button type="submit" disabled={isSubmitting} className="w-full">
-                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Adicionar
+              <Button type="submit" disabled={isSubmitting || isUploading} className="w-full">
+                {isUploading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    A otimizar e enviar imagem...
+                  </>
+                ) : (
+                  'Adicionar'
+                )}
               </Button>
             </form>
           </CardContent>

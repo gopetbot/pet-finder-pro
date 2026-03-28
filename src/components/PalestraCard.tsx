@@ -1,4 +1,3 @@
-import { getDriveImageUrl } from "@/lib/driveImage"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
 export interface Palestra {
@@ -7,7 +6,7 @@ export interface Palestra {
   palestrante: string
   data: string
   resumo: string
-  driveImageId: string
+  imageUrl: string
 }
 
 interface PalestraCardProps {
@@ -18,7 +17,8 @@ export function PalestraCard({ palestra }: PalestraCardProps) {
   return (
     <Card className="overflow-hidden">
       <img
-        src={getDriveImageUrl(palestra.driveImageId)}
+        src={palestra.imageUrl}
+        loading="lazy"
         alt={palestra.titulo}
         className="w-full h-48 object-cover rounded-t-lg"
       />
