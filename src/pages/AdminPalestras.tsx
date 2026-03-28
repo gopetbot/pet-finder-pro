@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { toast } from 'sonner'
-import { Loader2, Trash2 } from 'lucide-react'
+import { Eye, Loader2, Trash2 } from 'lucide-react'
 import {
   addDoc,
   collection,
@@ -29,6 +29,12 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 
 // Data model
 interface Palestra {
@@ -58,6 +64,7 @@ export default function AdminPalestras() {
   const [isUploading, setIsUploading] = useState<boolean>(false)
   const [previewUrl, setPreviewUrl] = useState<string>('')
   const [fileError, setFileError] = useState<string>('')
+  const [selectedPalestra, setSelectedPalestra] = useState<Palestra | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
   const {
@@ -232,14 +239,24 @@ export default function AdminPalestras() {
                           {palestra.resumo}
                         </p>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDelete(palestra.id)}
-                        aria-label="Deletar palestra"
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
+                      <div className="flex gap-1 shrink-0">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setSelectedPalestra(palestra)}
+                          aria-label="Ver detalhes"
+                        >
+                          <Eye className="h-4 w-4 text-muted-foreground" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDelete(palestra.id)}
+                          aria-label="Deletar palestra"
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
                     </CardContent>
                   </Card>
                 </li>
@@ -248,6 +265,30 @@ export default function AdminPalestras() {
           )}
         </section>
       </main>
+
+      <Dialog open={!!selectedPalestra} onOpenChange={(open) => !open && setSelectedPalestra(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{selectedPalestra?.titulo}</DialogTitle>
+          </DialogHeader>
+          {selectedPalestra && (
+            <div className="space-y-4">
+              {selectedPalestra.imageUrl && (
+                <img
+                  src={selectedPalestra.imageUrl}
+                  alt={selectedPalestra.titulo}
+                  className="w-full h-48 object-cover rounded-md"
+                />
+              )}
+              <div className="space-y-2 text-sm">
+                <p><span className="font-medium">Palestrante:</span> {selectedPalestra.palestrante}</p>
+                <p><span className="font-medium">Data:</span> {selectedPalestra.data}</p>
+                <p><span className="font-medium">Resumo:</span> {selectedPalestra.resumo}</p>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
