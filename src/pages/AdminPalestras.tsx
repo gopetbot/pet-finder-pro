@@ -102,9 +102,10 @@ export default function AdminPalestras() {
       reset()
       setPreviewUrl('')
       if (fileRef.current) fileRef.current.value = ''
-    } catch {
+    } catch (err) {
+      console.error('[AdminPalestras] handleAddPalestra error:', err)
       toast('Erro ao adicionar palestra.', {
-        description: 'Tente novamente.',
+        description: err instanceof Error ? err.message : 'Tente novamente.',
       })
     } finally {
       setIsUploading(false)
