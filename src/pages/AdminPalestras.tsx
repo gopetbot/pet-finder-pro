@@ -84,7 +84,9 @@ export default function AdminPalestras() {
   }, [])
 
   const handleAddPalestra = async (formData: PalestraFormData) => {
+    console.log('[handleAddPalestra] called', { formData })
     const file = fileRef.current?.files?.[0]
+    console.log('[handleAddPalestra] file:', file)
     if (!file) {
       setFileError('Imagem é obrigatória')
       return
@@ -92,7 +94,9 @@ export default function AdminPalestras() {
 
     setIsUploading(true)
     try {
+      console.log('[handleAddPalestra] calling uploadPalestraImage...')
       const imageUrl = await uploadPalestraImage(file)
+      console.log('[handleAddPalestra] imageUrl:', imageUrl)
       await addDoc(collection(db, 'palestras'), {
         ...formData,
         imageUrl,
@@ -132,7 +136,7 @@ export default function AdminPalestras() {
             <CardTitle>Adicionar Palestra</CardTitle>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit(handleAddPalestra)} className="space-y-4">
+            <form onSubmit={(e) => { console.log('[form] onSubmit fired'); return handleSubmit(handleAddPalestra)(e) }} className="space-y-4">
               <div className="space-y-1">
                 <Label htmlFor="titulo">Título</Label>
                 <Input id="titulo" {...register('titulo')} />
